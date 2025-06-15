@@ -1,7 +1,5 @@
 import React, { useState } from 'react';
-import { useAuth } from '../contexts/AuthContext';
-import { collection, addDoc } from 'firebase/firestore';
-import { db } from '../firebase/config';
+import { useData } from '../contexts/DataContext';
 import { X, Sparkles, Clock, Hash } from 'lucide-react';
 
 interface RoutineInputProps {
@@ -10,7 +8,7 @@ interface RoutineInputProps {
 }
 
 const RoutineInput: React.FC<RoutineInputProps> = ({ onClose, onSave }) => {
-  const { user } = useAuth();
+  const { addTask } = useData();
   const [routineText, setRoutineText] = useState('');
   const [loading, setLoading] = useState(false);
 
@@ -62,8 +60,7 @@ const RoutineInput: React.FC<RoutineInputProps> = ({ onClose, onSave }) => {
           content: content || 'Task',
           tag,
           completed: false,
-          date: new Date().toISOString().split('T')[0],
-          userId: user!.uid
+          date: new Date().toISOString().split('T')[0]
         });
       }
     }
@@ -79,7 +76,7 @@ const RoutineInput: React.FC<RoutineInputProps> = ({ onClose, onSave }) => {
       const tasks = parseRoutineText(routineText);
       
       for (const task of tasks) {
-        await addDoc(collection(db, 'tasks'), task);
+        await addTask(task);
       }
       
       onSave();

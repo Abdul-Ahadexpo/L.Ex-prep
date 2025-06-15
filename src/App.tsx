@@ -2,6 +2,7 @@ import React from 'react';
 import { BrowserRouter as Router, Routes, Route, Navigate } from 'react-router-dom';
 import { AuthProvider, useAuth } from './contexts/AuthContext';
 import { NotificationProvider } from './contexts/NotificationContext';
+import { DataProvider } from './contexts/DataContext';
 import LoginPage from './components/LoginPage';
 import Dashboard from './components/Dashboard';
 
@@ -20,15 +21,15 @@ const AppContent: React.FC = () => {
     <Routes>
       <Route 
         path="/login" 
-        element={user ? <Navigate to="/dashboard" replace /> : <LoginPage />} 
+        element={<LoginPage />} 
       />
       <Route 
         path="/dashboard" 
-        element={user ? <Dashboard /> : <Navigate to="/login" replace />} 
+        element={<Dashboard />} 
       />
       <Route 
         path="/" 
-        element={<Navigate to={user ? "/dashboard" : "/login"} replace />} 
+        element={<Navigate to="/login" replace />} 
       />
     </Routes>
   );
@@ -37,13 +38,15 @@ const AppContent: React.FC = () => {
 function App() {
   return (
     <AuthProvider>
-      <NotificationProvider>
-        <Router>
-          <div className="App">
-            <AppContent />
-          </div>
-        </Router>
-      </NotificationProvider>
+      <DataProvider>
+        <NotificationProvider>
+          <Router>
+            <div className="App">
+              <AppContent />
+            </div>
+          </Router>
+        </NotificationProvider>
+      </DataProvider>
     </AuthProvider>
   );
 }
