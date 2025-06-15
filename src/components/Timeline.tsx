@@ -1,6 +1,6 @@
 import React from 'react';
 import { Check, Clock, BookOpen, MessageCircle, Coffee, Users, MoreHorizontal } from 'lucide-react';
-import { Task } from '../contexts/DataContext';
+import { Task } from './Dashboard';
 
 interface TimelineProps {
   tasks: Task[];

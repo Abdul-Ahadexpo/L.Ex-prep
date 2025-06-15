@@ -1,29 +1,59 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
-import { useData } from '../contexts/DataContext';
-import { Plus, Clock, Check, LogOut, User, Bell, Settings, Database, HardDrive, Cloud } from 'lucide-react';
+import { collection, addDoc, onSnapshot, query, where, orderBy, updateDoc, doc } from 'firebase/firestore';
+import { db } from '../firebase/config';
+import { Plus, Clock, Check, LogOut, User, Bell, Settings } from 'lucide-react';
 import RoutineInput from './RoutineInput';
 import Timeline from './Timeline';
 import NotificationPrompt from './NotificationPrompt';
 import NotificationSettings from './NotificationSettings';
-import DataSyncPrompt from './DataSyncPrompt';
-import DataManager from './DataManager';
+
+export interface Task {
+  id: string;
+  time: string;
+  endTime?: string;
+  content: string;
+  tag: string;
+  completed: boolean;
+  date: string;
+  userId: string;
+}
 
 const Dashboard: React.FC = () => {
   const { user, logout } = useAuth();
   const { permission, scheduleTaskNotifications } = useNotifications();
-  const { tasks, loading, isGuestMode, hasLocalData, updateTask } = useData();
+  const [tasks, setTasks] = useState<Task[]>([]);
   const [showInput, setShowInput] = useState(false);
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
-  const [showDataSyncPrompt, setShowDataSyncPrompt] = useState(false);
-  const [showDataManager, setShowDataManager] = useState(false);
+  const [loading, setLoading] = useState(true);
 
-  // Schedule notifications when tasks change
   useEffect(() => {
-    scheduleTaskNotifications(tasks);
-  }, [tasks, scheduleTaskNotifications]);
+    if (!user) return;
+
+    const today = new Date().toISOString().split('T')[0];
+    const q = query(
+      collection(db, 'tasks'),
+      where('userId', '==', user.uid),
+      where('date', '==', today),
+      orderBy('time')
+    );
+
+    const unsubscribe = onSnapshot(q, (snapshot) => {
+      const tasksData = snapshot.docs.map(doc => ({
+        id: doc.id,
+        ...doc.data()
+      })) as Task[];
+      setTasks(tasksData);
+      setLoading(false);
+
+      // Schedule notifications when tasks are loaded/updated
+      scheduleTaskNotifications(tasksData);
+    });
+
+    return unsubscribe;
+  }, [user, scheduleTaskNotifications]);
 
   // Show notification prompt on first visit (after login)
   useEffect(() => {
@@ -34,20 +64,11 @@ const Dashboard: React.FC = () => {
     }
   }, [permission, tasks.length]);
 
-  // Show data sync prompt when user logs in with local data
-  useEffect(() => {
-    if (user && hasLocalData) {
-      const hasSeenSyncPrompt = sessionStorage.getItem('hasSeenSyncPrompt');
-      if (!hasSeenSyncPrompt) {
-        setShowDataSyncPrompt(true);
-        sessionStorage.setItem('hasSeenSyncPrompt', 'true');
-      }
-    }
-  }, [user, hasLocalData]);
-
   const toggleTask = async (taskId: string, completed: boolean) => {
     try {
-      await updateTask(taskId, { completed: !completed });
+      await updateDoc(doc(db, 'tasks', taskId), {
+        completed: !completed
+      });
     } catch (error) {
       console.error('Error updating task:', error);
     }
@@ -89,47 +110,24 @@ const Dashboard: React.FC = () => {
       <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
-              <span className="text-white font-bold text-sm">L.Ex</span>
+            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
+              <User className="w-6 h-6 text-white" />
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center space-x-2">
-                <span>L.Ex prep</span>
-                {isGuestMode && (
-                  <span className="inline-flex items-center space-x-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full text-xs font-medium">
-                    <HardDrive className="w-3 h-3" />
-                    <span>Guest Mode</span>
-                  </span>
-                )}
-                {!isGuestMode && (
-                  <span className="inline-flex items-center space-x-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-medium">
-                    <Cloud className="w-3 h-3" />
-                    <span>Cloud Sync</span>
-                  </span>
-                )}
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
+                Welcome back, {user?.displayName?.split(' ')[0]}!
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {isGuestMode ? (
-                  'LateExam-Preparation • Data saved locally'
-                ) : (
-                  `Welcome back, ${user?.displayName?.split(' ')[0]}! • ${new Date().toLocaleDateString('en-US', { 
-                    weekday: 'long', 
-                    year: 'numeric', 
-                    month: 'long', 
-                    day: 'numeric' 
-                  })}`
-                )}
+                {new Date().toLocaleDateString('en-US', { 
+                  weekday: 'long', 
+                  year: 'numeric', 
+                  month: 'long', 
+                  day: 'numeric' 
+                })}
               </p>
             </div>
           </div>
           <div className="flex items-center space-x-2">
-            <button
-              onClick={() => setShowDataManager(true)}
-              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-              title="Data Management"
-            >
-              <Database className="w-5 h-5" />
-            </button>
             <button
               onClick={() => setShowNotificationSettings(true)}
               className={`p-2 rounded-lg transition-colors ${
@@ -141,37 +139,17 @@ const Dashboard: React.FC = () => {
             >
               <Bell className="w-5 h-5" />
             </button>
-            {!isGuestMode && (
-              <button
-                onClick={logout}
-                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-                title="Logout"
-              >
-                <LogOut className="w-5 h-5" />
-              </button>
-            )}
+            <button
+              onClick={logout}
+              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+            >
+              <LogOut className="w-5 h-5" />
+            </button>
           </div>
         </div>
       </header>
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* Guest Mode Info */}
-        {isGuestMode && (
-          <div className="bg-gradient-to-r from-orange-50 to-yellow-50 dark:from-orange-900/20 dark:to-yellow-900/20 border border-orange-200 dark:border-orange-800 rounded-2xl p-4">
-            <div className="flex items-start space-x-3">
-              <HardDrive className="w-5 h-5 text-orange-500 mt-0.5" />
-              <div className="flex-1">
-                <h3 className="font-medium text-orange-800 dark:text-orange-200">
-                  You're using Guest Mode
-                </h3>
-                <p className="text-sm text-orange-700 dark:text-orange-300 mt-1">
-                  Your data is saved locally on this device. Sign in with Google to sync across devices and never lose your routines.
-                </p>
-              </div>
-            </div>
-          </div>
-        )}
-
         {/* Progress Card */}
         <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
           <div className="flex items-center justify-between mb-4">
@@ -263,18 +241,6 @@ const Dashboard: React.FC = () => {
       {showNotificationSettings && (
         <NotificationSettings 
           onClose={() => setShowNotificationSettings(false)}
-        />
-      )}
-
-      {showDataSyncPrompt && (
-        <DataSyncPrompt 
-          onClose={() => setShowDataSyncPrompt(false)}
-        />
-      )}
-
-      {showDataManager && (
-        <DataManager 
-          onClose={() => setShowDataManager(false)}
         />
       )}
     </div>
