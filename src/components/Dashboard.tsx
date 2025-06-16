@@ -1,59 +1,31 @@
 import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
-import { collection, addDoc, onSnapshot, query, where, orderBy, updateDoc, doc } from 'firebase/firestore';
-import { db } from '../firebase/config';
-import { Plus, Clock, Check, LogOut, User, Bell, Settings } from 'lucide-react';
+import { useData } from '../contexts/DataContext';
+import { Plus, Clock, Check, LogOut, User, Bell, Settings, Database, HardDrive, Cloud, Edit, Sparkles } from 'lucide-react';
 import RoutineInput from './RoutineInput';
+import ManualRoutineForm from './ManualRoutineForm';
 import Timeline from './Timeline';
 import NotificationPrompt from './NotificationPrompt';
 import NotificationSettings from './NotificationSettings';
-
-export interface Task {
-  id: string;
-  time: string;
-  endTime?: string;
-  content: string;
-  tag: string;
-  completed: boolean;
-  date: string;
-  userId: string;
-}
+import DataSyncPrompt from './DataSyncPrompt';
+import DataManager from './DataManager';
 
 const Dashboard: React.FC = () => {
-  const { user, logout } = useAuth();
+  const { user, logout, signInWithGoogle } = useAuth();
   const { permission, scheduleTaskNotifications } = useNotifications();
-  const [tasks, setTasks] = useState<Task[]>([]);
+  const { tasks, loading, isGuestMode, hasLocalData, updateTask } = useData();
   const [showInput, setShowInput] = useState(false);
+  const [showManualForm, setShowManualForm] = useState(false);
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
   const [showNotificationSettings, setShowNotificationSettings] = useState(false);
-  const [loading, setLoading] = useState(true);
+  const [showDataSyncPrompt, setShowDataSyncPrompt] = useState(false);
+  const [showDataManager, setShowDataManager] = useState(false);
 
+  // Schedule notifications when tasks change
   useEffect(() => {
-    if (!user) return;
-
-    const today = new Date().toISOString().split('T')[0];
-    const q = query(
-      collection(db, 'tasks'),
-      where('userId', '==', user.uid),
-      where('date', '==', today),
-      orderBy('time')
-    );
-
-    const unsubscribe = onSnapshot(q, (snapshot) => {
-      const tasksData = snapshot.docs.map(doc => ({
-        id: doc.id,
-        ...doc.data()
-      })) as Task[];
-      setTasks(tasksData);
-      setLoading(false);
-
-      // Schedule notifications when tasks are loaded/updated
-      scheduleTaskNotifications(tasksData);
-    });
-
-    return unsubscribe;
-  }, [user, scheduleTaskNotifications]);
+    scheduleTaskNotifications(tasks);
+  }, [tasks, scheduleTaskNotifications]);
 
   // Show notification prompt on first visit (after login)
   useEffect(() => {
@@ -64,11 +36,20 @@ const Dashboard: React.FC = () => {
     }
   }, [permission, tasks.length]);
 
+  // Show data sync prompt when user logs in with local data
+  useEffect(() => {
+    if (user && hasLocalData) {
+      const hasSeenSyncPrompt = sessionStorage.getItem('hasSeenSyncPrompt');
+      if (!hasSeenSyncPrompt) {
+        setShowDataSyncPrompt(true);
+        sessionStorage.setItem('hasSeenSyncPrompt', 'true');
+      }
+    }
+  }, [user, hasLocalData]);
+
   const toggleTask = async (taskId: string, completed: boolean) => {
     try {
-      await updateDoc(doc(db, 'tasks', taskId), {
-        completed: !completed
-      });
+      await updateTask(taskId, { completed: !completed });
     } catch (error) {
       console.error('Error updating task:', error);
     }
@@ -110,24 +91,91 @@ const Dashboard: React.FC = () => {
       <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-4xl mx-auto px-4 py-4 flex items-center justify-between">
           <div className="flex items-center space-x-3">
-            <div className="w-10 h-10 bg-blue-500 rounded-full flex items-center justify-center">
-              <User className="w-6 h-6 text-white" />
+            <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
+              <span className="text-white font-bold text-sm">L.Ex</span>
             </div>
             <div>
-              <h1 className="text-xl font-bold text-gray-900 dark:text-white">
-                Welcome back, {user?.displayName?.split(' ')[0]}!
+              <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center space-x-2">
+                <span>L.Ex prep</span>
+                {isGuestMode && (
+                  <span className="inline-flex items-center space-x-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full text-xs font-medium">
+                    <HardDrive className="w-3 h-3" />
+                    <span>Guest Mode</span>
+                  </span>
+                )}
+                {!isGuestMode && (
+                  <span className="inline-flex items-center space-x-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-medium">
+                    <Cloud className="w-3 h-3" />
+                    <span>Cloud Sync</span>
+                  </span>
+                )}
               </h1>
               <p className="text-sm text-gray-500 dark:text-gray-400">
-                {new Date().toLocaleDateString('en-US', { 
-                  weekday: 'long', 
-                  year: 'numeric', 
-                  month: 'long', 
-                  day: 'numeric' 
-                })}
+                {isGuestMode ? (
+                  'LateExam-Preparation • Data saved locally'
+                ) : (
+                  `Welcome back, ${user?.displayName?.split(' ')[0]}! • ${new Date().toLocaleDateString('en-US', { 
+                    weekday: 'long', 
+                    year: 'numeric', 
+                    month: 'long', 
+                    day: 'numeric' 
+                  })}`
+                )}
               </p>
             </div>
           </div>
+          
+          {/* Right side buttons */}
           <div className="flex items-center space-x-2">
+            {/* Login/Profile Button */}
+            {isGuestMode ? (
+              <div className="flex flex-col items-end">
+                <button
+                  onClick={signInWithGoogle}
+                  className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center space-x-2 text-sm font-medium"
+                >
+                  <span>🔒</span>
+                  <span className="hidden sm:inline">Sign in to sync</span>
+                  <span className="sm:hidden">Sign in</span>
+                </button>
+                <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right max-w-32">
+                  Save data across devices ☁️
+                </p>
+              </div>
+            ) : (
+              <div className="flex items-center space-x-2">
+                <div className="flex items-center space-x-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
+                  {user?.photoURL ? (
+                    <img 
+                      src={user.photoURL} 
+                      alt="Profile" 
+                      className="w-6 h-6 rounded-full"
+                    />
+                  ) : (
+                    <User className="w-5 h-5 text-green-600 dark:text-green-400" />
+                  )}
+                  <span className="text-sm font-medium text-green-700 dark:text-green-300 hidden sm:inline">
+                    {user?.displayName?.split(' ')[0]}
+                  </span>
+                </div>
+                <button
+                  onClick={logout}
+                  className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+                  title="Logout"
+                >
+                  <LogOut className="w-5 h-5" />
+                </button>
+              </div>
+            )}
+            
+            {/* Other buttons */}
+            <button
+              onClick={() => setShowDataManager(true)}
+              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
+              title="Data Management"
+            >
+              <Database className="w-5 h-5" />
+            </button>
             <button
               onClick={() => setShowNotificationSettings(true)}
               className={`p-2 rounded-lg transition-colors ${
@@ -139,36 +187,53 @@ const Dashboard: React.FC = () => {
             >
               <Bell className="w-5 h-5" />
             </button>
-            <button
-              onClick={logout}
-              className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
-            >
-              <LogOut className="w-5 h-5" />
-            </button>
           </div>
         </div>
       </header>
 
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
-        {/* Progress Card */}
-        <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
-          <div className="flex items-center justify-between mb-4">
-            <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Today's Progress</h2>
-            <div className="text-2xl font-bold text-blue-500">
-              {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
+        {/* Guest Mode Welcome */}
+        {isGuestMode && tasks.length === 0 && (
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-6">
+            <div className="text-center">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
+                <span className="text-white font-bold text-xl">L.Ex</span>
+              </div>
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
+                Welcome to L.Ex prep! ⚡
+              </h2>
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
+                Your smart exam routine tracker is ready to use instantly. Start by adding your first routine below!
+              </p>
+              <div className="flex items-center justify-center space-x-2 text-sm text-blue-600 dark:text-blue-400">
+                <HardDrive className="w-4 h-4" />
+                <span>Running in Guest Mode • Data saved locally</span>
+              </div>
             </div>
           </div>
-          <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-4">
-            <div 
-              className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500"
-              style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
-            ></div>
+        )}
+
+        {/* Progress Card */}
+        {tasks.length > 0 && (
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
+            <div className="flex items-center justify-between mb-4">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Today's Progress</h2>
+              <div className="text-2xl font-bold text-blue-500">
+                {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
+              </div>
+            </div>
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-4">
+              <div 
+                className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500"
+                style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
+              ></div>
+            </div>
+            <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
+              <span>{completedTasks} completed</span>
+              <span>{totalTasks} total tasks</span>
+            </div>
           </div>
-          <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
-            <span>{completedTasks} completed</span>
-            <span>{totalTasks} total tasks</span>
-          </div>
-        </div>
+        )}
 
         {/* Current Task */}
         {currentTask && (
@@ -192,34 +257,55 @@ const Dashboard: React.FC = () => {
           </div>
         )}
 
-        {/* Timeline */}
-        {tasks.length > 0 ? (
-          <Timeline tasks={tasks} onToggleTask={toggleTask} />
-        ) : (
+        {/* Add Routine Options */}
+        {tasks.length === 0 && (
           <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 text-center">
             <Clock className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
             <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
-              No routine for today
+              Ready to create your routine?
             </h3>
             <p className="text-gray-600 dark:text-gray-400 mb-6">
-              Create your first routine to get started with tracking your exam preparation.
+              Choose how you'd like to add your exam preparation schedule.
             </p>
-            <button
-              onClick={() => setShowInput(true)}
-              className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5"
-            >
-              Create Routine
-            </button>
+            <div className="flex flex-col sm:flex-row gap-3 justify-center">
+              <button
+                onClick={() => setShowManualForm(true)}
+                className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center space-x-2"
+              >
+                <Edit className="w-5 h-5" />
+                <span>Add Manually</span>
+              </button>
+              <button
+                onClick={() => setShowInput(true)}
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center space-x-2"
+              >
+                <Sparkles className="w-5 h-5" />
+                <span>Paste Routine</span>
+              </button>
+            </div>
           </div>
         )}
 
-        {/* Add Routine Button */}
-        <div className="fixed bottom-6 right-6">
+        {/* Timeline */}
+        {tasks.length > 0 && (
+          <Timeline tasks={tasks} onToggleTask={toggleTask} />
+        )}
+
+        {/* Floating Action Buttons */}
+        <div className="fixed bottom-6 right-6 flex flex-col space-y-3">
+          <button
+            onClick={() => setShowManualForm(true)}
+            className="bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1"
+            title="Add Routine Manually"
+          >
+            <Edit className="w-6 h-6" />
+          </button>
           <button
             onClick={() => setShowInput(true)}
             className="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1"
+            title="Paste Routine"
           >
-            <Plus className="w-6 h-6" />
+            <Sparkles className="w-6 h-6" />
           </button>
         </div>
       </div>
@@ -232,6 +318,13 @@ const Dashboard: React.FC = () => {
         />
       )}
 
+      {showManualForm && (
+        <ManualRoutineForm 
+          onClose={() => setShowManualForm(false)}
+          onSave={() => setShowManualForm(false)}
+        />
+      )}
+
       {showNotificationPrompt && (
         <NotificationPrompt 
           onClose={() => setShowNotificationPrompt(false)}
@@ -241,6 +334,18 @@ const Dashboard: React.FC = () => {
       {showNotificationSettings && (
         <NotificationSettings 
           onClose={() => setShowNotificationSettings(false)}
+        />
+      )}
+
+      {showDataSyncPrompt && (
+        <DataSyncPrompt 
+          onClose={() => setShowDataSyncPrompt(false)}
+        />
+      )}
+
+      {showDataManager && (
+        <DataManager 
+          onClose={() => setShowDataManager(false)}
         />
       )}
     </div>

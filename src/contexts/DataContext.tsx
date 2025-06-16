@@ -21,10 +21,12 @@ interface DataContextType {
   hasLocalData: boolean;
   addTask: (task: Omit<Task, 'id'>) => Promise<void>;
   updateTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
+  deleteTask: (taskId: string) => Promise<void>;
   exportData: () => void;
   importData: (data: any) => Promise<void>;
   syncLocalToCloud: () => Promise<void>;
   clearLocalData: () => void;
+  setGuestMode: (isGuest: boolean) => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -40,10 +42,11 @@ export const useData = () => {
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(true);
+  const [loading, setLoading] = useState(false); // Start with false for instant guest mode
   const [hasLocalData, setHasLocalData] = useState(false);
+  const [guestMode, setGuestModeState] = useState(true); // Default to guest mode
 
-  const isGuestMode = !user;
+  const isGuestMode = !user || guestMode;
 
   // Check for local data on mount
   useEffect(() => {
@@ -51,20 +54,34 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     setHasLocalData(!!localTasks && JSON.parse(localTasks).length > 0);
   }, []);
 
-  // Load data based on auth state
+  // Initialize with guest mode immediately
   useEffect(() => {
-    if (user) {
+    loadFromLocalStorage();
+  }, []);
+
+  // Handle auth state changes
+  useEffect(() => {
+    if (user && !guestMode) {
       // Load from Firebase for logged-in users
       loadFromFirebase();
-    } else {
-      // Load from localStorage for guests
+    } else if (!user) {
+      // Reset to guest mode if user logs out
+      setGuestModeState(true);
       loadFromLocalStorage();
     }
-  }, [user]);
+  }, [user, guestMode]);
+
+  const setGuestMode = (isGuest: boolean) => {
+    setGuestModeState(isGuest);
+    if (isGuest) {
+      loadFromLocalStorage();
+    }
+  };
 
   const loadFromFirebase = () => {
-    if (!user) return;
+    if (!user || guestMode) return;
 
+    setLoading(true);
     const today = new Date().toISOString().split('T')[0];
     const q = query(
       collection(db, 'tasks'),
@@ -121,7 +138,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const addTask = async (taskData: Omit<Task, 'id'>) => {
-    if (user) {
+    if (user && !guestMode) {
       // Add to Firebase
       await addDoc(collection(db, 'tasks'), {
         ...taskData,
@@ -133,14 +150,14 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...taskData,
         id: Date.now().toString()
       };
-      const updatedTasks = [...tasks, newTask];
+      const updatedTasks = [...tasks, newTask].sort((a, b) => a.time.localeCompare(b.time));
       setTasks(updatedTasks);
       saveToLocalStorage(updatedTasks);
     }
   };
 
   const updateTask = async (taskId: string, updates: Partial<Task>) => {
-    if (user) {
+    if (user && !guestMode) {
       // Update in Firebase
       await updateDoc(doc(db, 'tasks', taskId), updates);
     } else {
@@ -148,6 +165,19 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       const updatedTasks = tasks.map(task =>
         task.id === taskId ? { ...task, ...updates } : task
       );
+      setTasks(updatedTasks);
+      saveToLocalStorage(updatedTasks);
+    }
+  };
+
+  const deleteTask = async (taskId: string) => {
+    if (user && !guestMode) {
+      // Delete from Firebase
+      // Note: You'll need to implement deleteDoc from Firestore
+      console.log('Delete from Firebase not implemented yet');
+    } else {
+      // Delete from localStorage
+      const updatedTasks = tasks.filter(task => task.id !== taskId);
       setTasks(updatedTasks);
       saveToLocalStorage(updatedTasks);
     }
@@ -185,7 +215,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         throw new Error('Invalid data format');
       }
 
-      if (user) {
+      if (user && !guestMode) {
         // Import to Firebase
         const batch = writeBatch(db);
         data.tasks.forEach((task: any) => {
@@ -229,9 +259,10 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
       await batch.commit();
       
-      // Clear local data after successful sync
+      // Clear local data after successful sync and switch to cloud mode
       localStorage.removeItem('lexprep_tasks');
       setHasLocalData(false);
+      setGuestModeState(false); // Switch to cloud mode
     } catch (error) {
       console.error('Error syncing to cloud:', error);
       throw new Error('Failed to sync data to cloud');
@@ -253,10 +284,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     hasLocalData,
     addTask,
     updateTask,
+    deleteTask,
     exportData,
     importData,
     syncLocalToCloud,
-    clearLocalData
+    clearLocalData,
+    setGuestMode
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
