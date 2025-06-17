@@ -98,40 +98,40 @@ const Dashboard: React.FC = () => {
 
   if (loading) {
     return (
-      <div className="min-h-screen flex items-center justify-center">
+      <div className="min-h-screen bg-gray-50 dark:bg-gray-900 flex items-center justify-center">
         <div className="animate-spin rounded-full h-12 w-12 border-b-2 border-blue-500"></div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen">
-      {/* Header with glass morphism effect */}
-      <header className="bg-white/10 dark:bg-gray-800/10 backdrop-blur-xl shadow-lg border-b border-white/20 dark:border-gray-700/20">
+    <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Header */}
+      <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-4xl mx-auto px-4 py-4">
           <div className="flex items-center justify-between">
             {/* Logo and Title */}
             <div className="flex items-center space-x-3">
-              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center shadow-lg">
+              <div className="w-10 h-10 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center">
                 <span className="text-white font-bold text-sm">L.Ex</span>
               </div>
               <div>
-                <h1 className="text-xl font-bold text-white flex items-center space-x-2">
+                <h1 className="text-xl font-bold text-gray-900 dark:text-white flex items-center space-x-2">
                   <span>L.Ex prep</span>
                   {isGuestMode && (
-                    <span className="hidden sm:inline-flex items-center space-x-1 px-2 py-1 bg-orange-500/20 backdrop-blur-sm text-orange-300 rounded-full text-xs font-medium border border-orange-400/30">
+                    <span className="hidden sm:inline-flex items-center space-x-1 px-2 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full text-xs font-medium">
                       <HardDrive className="w-3 h-3" />
                       <span>Guest Mode</span>
                     </span>
                   )}
                   {!isGuestMode && (
-                    <span className="hidden sm:inline-flex items-center space-x-1 px-2 py-1 bg-green-500/20 backdrop-blur-sm text-green-300 rounded-full text-xs font-medium border border-green-400/30">
+                    <span className="hidden sm:inline-flex items-center space-x-1 px-2 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-medium">
                       <Cloud className="w-3 h-3" />
                       <span>Cloud Sync</span>
                     </span>
                   )}
                 </h1>
-                <p className="text-sm text-gray-300 hidden sm:block">
+                <p className="text-sm text-gray-500 dark:text-gray-400 hidden sm:block">
                   {isGuestMode ? (
                     'LateExam-Preparation • Data saved locally'
                   ) : (
@@ -153,19 +153,19 @@ const Dashboard: React.FC = () => {
                 <div className="flex flex-col items-end">
                   <button
                     onClick={signInWithGoogle}
-                    className="bg-blue-500/80 hover:bg-blue-600/80 backdrop-blur-sm text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center space-x-2 text-sm font-medium border border-blue-400/30"
+                    className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center space-x-2 text-sm font-medium"
                   >
                     <span>🔒</span>
                     <span className="hidden lg:inline">Sign in to sync</span>
                     <span className="lg:hidden">Sign in</span>
                   </button>
-                  <p className="text-xs text-gray-300 mt-1 text-right max-w-32">
+                  <p className="text-xs text-gray-500 dark:text-gray-400 mt-1 text-right max-w-32">
                     Save data across devices ☁️
                   </p>
                 </div>
               ) : (
                 <div className="flex items-center space-x-2">
-                  <div className="flex items-center space-x-2 px-3 py-2 bg-green-500/20 backdrop-blur-sm rounded-lg border border-green-400/30">
+                  <div className="flex items-center space-x-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
                     {user?.photoURL ? (
                       <img 
                         src={user.photoURL} 
@@ -173,15 +173,15 @@ const Dashboard: React.FC = () => {
                         className="w-6 h-6 rounded-full"
                       />
                     ) : (
-                      <User className="w-5 h-5 text-green-300" />
+                      <User className="w-5 h-5 text-green-600 dark:text-green-400" />
                     )}
-                    <span className="text-sm font-medium text-green-300 hidden lg:inline">
+                    <span className="text-sm font-medium text-green-700 dark:text-green-300 hidden lg:inline">
                       {user?.displayName?.split(' ')[0]}
                     </span>
                   </div>
                   <button
                     onClick={logout}
-                    className="p-2 text-gray-300 hover:text-white transition-colors"
+                    className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
                     title="Logout"
                   >
                     <LogOut className="w-5 h-5" />
@@ -192,7 +192,7 @@ const Dashboard: React.FC = () => {
               {/* Other buttons */}
               <button
                 onClick={() => setShowDataManager(true)}
-                className="p-2 text-gray-300 hover:text-white transition-colors"
+                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
                 title="Data Management"
               >
                 <Database className="w-5 h-5" />
@@ -201,8 +201,8 @@ const Dashboard: React.FC = () => {
                 onClick={() => setShowNotificationSettings(true)}
                 className={`p-2 rounded-lg transition-colors ${
                   permission === 'granted' 
-                    ? 'text-blue-400 hover:bg-blue-500/20' 
-                    : 'text-gray-300 hover:text-white'
+                    ? 'text-blue-500 hover:bg-blue-50 dark:hover:bg-blue-900/20' 
+                    : 'text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200'
                 }`}
                 title="Notification Settings"
               >
@@ -214,24 +214,24 @@ const Dashboard: React.FC = () => {
             <div className="md:hidden mobile-menu-container relative">
               <button
                 onClick={() => setShowMobileMenu(!showMobileMenu)}
-                className="p-2 text-gray-300 hover:text-white transition-colors"
+                className="p-2 text-gray-500 hover:text-gray-700 dark:text-gray-400 dark:hover:text-gray-200 transition-colors"
               >
                 {showMobileMenu ? <X className="w-6 h-6" /> : <Menu className="w-6 h-6" />}
               </button>
 
               {/* Mobile Dropdown Menu */}
               {showMobileMenu && (
-                <div className="absolute right-0 top-full mt-2 w-64 bg-white/10 backdrop-blur-xl rounded-xl shadow-2xl border border-white/20 z-50">
+                <div className="absolute right-0 top-full mt-2 w-64 bg-white dark:bg-gray-800 rounded-xl shadow-2xl border border-gray-200 dark:border-gray-700 z-50">
                   <div className="p-4 space-y-3">
                     {/* Status Badge */}
                     <div className="flex items-center justify-center">
                       {isGuestMode ? (
-                        <span className="inline-flex items-center space-x-1 px-3 py-1 bg-orange-500/20 backdrop-blur-sm text-orange-300 rounded-full text-xs font-medium border border-orange-400/30">
+                        <span className="inline-flex items-center space-x-1 px-3 py-1 bg-orange-100 dark:bg-orange-900/30 text-orange-700 dark:text-orange-300 rounded-full text-xs font-medium">
                           <HardDrive className="w-3 h-3" />
                           <span>Guest Mode</span>
                         </span>
                       ) : (
-                        <span className="inline-flex items-center space-x-1 px-3 py-1 bg-green-500/20 backdrop-blur-sm text-green-300 rounded-full text-xs font-medium border border-green-400/30">
+                        <span className="inline-flex items-center space-x-1 px-3 py-1 bg-green-100 dark:bg-green-900/30 text-green-700 dark:text-green-300 rounded-full text-xs font-medium">
                           <Cloud className="w-3 h-3" />
                           <span>Cloud Sync</span>
                         </span>
@@ -242,14 +242,14 @@ const Dashboard: React.FC = () => {
                     {isGuestMode ? (
                       <button
                         onClick={() => handleMobileMenuAction(signInWithGoogle)}
-                        className="w-full bg-blue-500/80 hover:bg-blue-600/80 backdrop-blur-sm text-white px-4 py-3 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 text-sm font-medium border border-blue-400/30"
+                        className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 text-sm font-medium"
                       >
                         <span>🔒</span>
                         <span>Sign in to sync</span>
                       </button>
                     ) : (
                       <div className="space-y-2">
-                        <div className="flex items-center space-x-2 px-3 py-2 bg-green-500/20 backdrop-blur-sm rounded-lg border border-green-400/30">
+                        <div className="flex items-center space-x-2 px-3 py-2 bg-green-50 dark:bg-green-900/20 rounded-lg">
                           {user?.photoURL ? (
                             <img 
                               src={user.photoURL} 
@@ -257,15 +257,15 @@ const Dashboard: React.FC = () => {
                               className="w-6 h-6 rounded-full"
                             />
                           ) : (
-                            <User className="w-5 h-5 text-green-300" />
+                            <User className="w-5 h-5 text-green-600 dark:text-green-400" />
                           )}
-                          <span className="text-sm font-medium text-green-300">
+                          <span className="text-sm font-medium text-green-700 dark:text-green-300">
                             {user?.displayName?.split(' ')[0]}
                           </span>
                         </div>
                         <button
                           onClick={() => handleMobileMenuAction(logout)}
-                          className="w-full flex items-center justify-center space-x-2 px-4 py-2 text-gray-300 bg-white/10 backdrop-blur-sm rounded-lg hover:bg-white/20 transition-colors border border-white/20"
+                          className="w-full flex items-center justify-center space-x-2 px-4 py-2 text-gray-700 dark:text-gray-300 bg-gray-100 dark:bg-gray-700 rounded-lg hover:bg-gray-200 dark:hover:bg-gray-600 transition-colors"
                         >
                           <LogOut className="w-4 h-4" />
                           <span>Logout</span>
@@ -274,22 +274,22 @@ const Dashboard: React.FC = () => {
                     )}
 
                     {/* Menu Items */}
-                    <div className="border-t border-white/20 pt-3 space-y-2">
+                    <div className="border-t border-gray-200 dark:border-gray-700 pt-3 space-y-2">
                       <button
                         onClick={() => handleMobileMenuAction(() => setShowDataManager(true))}
-                        className="w-full flex items-center space-x-3 px-3 py-2 text-gray-300 hover:bg-white/10 rounded-lg transition-colors"
+                        className="w-full flex items-center space-x-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                       >
                         <Database className="w-5 h-5" />
                         <span>Data Management</span>
                       </button>
                       <button
                         onClick={() => handleMobileMenuAction(() => setShowNotificationSettings(true))}
-                        className="w-full flex items-center space-x-3 px-3 py-2 text-gray-300 hover:bg-white/10 rounded-lg transition-colors"
+                        className="w-full flex items-center space-x-3 px-3 py-2 text-gray-700 dark:text-gray-300 hover:bg-gray-100 dark:hover:bg-gray-700 rounded-lg transition-colors"
                       >
-                        <Bell className={`w-5 h-5 ${permission === 'granted' ? 'text-blue-400' : ''}`} />
+                        <Bell className={`w-5 h-5 ${permission === 'granted' ? 'text-blue-500' : ''}`} />
                         <span>Notifications</span>
                         {permission === 'granted' && (
-                          <span className="ml-auto w-2 h-2 bg-blue-400 rounded-full"></span>
+                          <span className="ml-auto w-2 h-2 bg-blue-500 rounded-full"></span>
                         )}
                       </button>
                     </div>
@@ -304,18 +304,18 @@ const Dashboard: React.FC = () => {
       <div className="max-w-4xl mx-auto px-4 py-6 space-y-6">
         {/* Guest Mode Welcome */}
         {isGuestMode && tasks.length === 0 && (
-          <div className="bg-gradient-to-r from-blue-500/20 to-purple-500/20 backdrop-blur-xl border border-blue-400/30 rounded-2xl p-6 shadow-2xl">
+          <div className="bg-gradient-to-r from-blue-50 to-purple-50 dark:from-blue-900/20 dark:to-purple-900/20 border border-blue-200 dark:border-blue-800 rounded-2xl p-6">
             <div className="text-center">
-              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4 shadow-lg">
+              <div className="w-16 h-16 bg-gradient-to-r from-blue-500 to-purple-500 rounded-full flex items-center justify-center mx-auto mb-4">
                 <span className="text-white font-bold text-xl">L.Ex</span>
               </div>
-              <h2 className="text-2xl font-bold text-white mb-2">
+              <h2 className="text-2xl font-bold text-gray-900 dark:text-white mb-2">
                 Welcome to L.Ex prep! ⚡
               </h2>
-              <p className="text-gray-200 mb-4">
+              <p className="text-gray-600 dark:text-gray-300 mb-4">
                 Your smart exam routine tracker is ready to use instantly. Start by adding your first routine below!
               </p>
-              <div className="flex items-center justify-center space-x-2 text-sm text-blue-300">
+              <div className="flex items-center justify-center space-x-2 text-sm text-blue-600 dark:text-blue-400">
                 <HardDrive className="w-4 h-4" />
                 <span>Running in Guest Mode • Data saved locally</span>
               </div>
@@ -325,20 +325,20 @@ const Dashboard: React.FC = () => {
 
         {/* Progress Card */}
         {tasks.length > 0 && (
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-6 border border-white/20">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-6">
             <div className="flex items-center justify-between mb-4">
-              <h2 className="text-lg font-semibold text-white">Today's Progress</h2>
-              <div className="text-2xl font-bold text-blue-400">
+              <h2 className="text-lg font-semibold text-gray-900 dark:text-white">Today's Progress</h2>
+              <div className="text-2xl font-bold text-blue-500">
                 {totalTasks > 0 ? Math.round((completedTasks / totalTasks) * 100) : 0}%
               </div>
             </div>
-            <div className="w-full bg-white/20 rounded-full h-3 mb-4">
+            <div className="w-full bg-gray-200 dark:bg-gray-700 rounded-full h-3 mb-4">
               <div 
                 className="bg-gradient-to-r from-blue-500 to-purple-500 h-3 rounded-full transition-all duration-500"
                 style={{ width: `${totalTasks > 0 ? (completedTasks / totalTasks) * 100 : 0}%` }}
               ></div>
             </div>
-            <div className="flex justify-between text-sm text-gray-300">
+            <div className="flex justify-between text-sm text-gray-600 dark:text-gray-400">
               <span>{completedTasks} completed</span>
               <span>{totalTasks} total tasks</span>
             </div>
@@ -347,7 +347,7 @@ const Dashboard: React.FC = () => {
 
         {/* Current Task */}
         {currentTask && (
-          <div className="bg-gradient-to-r from-blue-500/80 to-purple-500/80 backdrop-blur-xl rounded-2xl shadow-2xl p-6 text-white border border-blue-400/30">
+          <div className="bg-gradient-to-r from-blue-500 to-purple-500 rounded-2xl shadow-lg p-6 text-white">
             <div className="flex items-center space-x-3 mb-3">
               <Clock className="w-6 h-6" />
               <h3 className="text-lg font-semibold">Current Task</h3>
@@ -359,7 +359,7 @@ const Dashboard: React.FC = () => {
               </span>
               <button
                 onClick={() => toggleTask(currentTask.id, currentTask.completed)}
-                className="bg-white/20 hover:bg-white/30 backdrop-blur-sm px-4 py-2 rounded-lg transition-all duration-200 border border-white/30"
+                className="bg-white bg-opacity-20 hover:bg-opacity-30 px-4 py-2 rounded-lg transition-all duration-200"
               >
                 Mark Complete
               </button>
@@ -369,25 +369,25 @@ const Dashboard: React.FC = () => {
 
         {/* Add Routine Options */}
         {tasks.length === 0 && (
-          <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl p-8 text-center border border-white/20">
-            <Clock className="w-16 h-16 text-gray-400 mx-auto mb-4" />
-            <h3 className="text-xl font-semibold text-white mb-2">
+          <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg p-8 text-center">
+            <Clock className="w-16 h-16 text-gray-400 dark:text-gray-500 mx-auto mb-4" />
+            <h3 className="text-xl font-semibold text-gray-900 dark:text-white mb-2">
               Ready to create your routine?
             </h3>
-            <p className="text-gray-300 mb-6">
+            <p className="text-gray-600 dark:text-gray-400 mb-6">
               Choose how you'd like to add your exam preparation schedule.
             </p>
             <div className="flex flex-col sm:flex-row gap-3 justify-center">
               <button
                 onClick={() => setShowManualForm(true)}
-                className="bg-green-500/80 hover:bg-green-600/80 backdrop-blur-sm text-white px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 border border-green-400/30"
+                className="bg-green-500 hover:bg-green-600 text-white px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center space-x-2"
               >
                 <Edit className="w-5 h-5" />
                 <span>Add Manually</span>
               </button>
               <button
                 onClick={() => setShowInput(true)}
-                className="bg-blue-500/80 hover:bg-blue-600/80 backdrop-blur-sm text-white px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center space-x-2 border border-blue-400/30"
+                className="bg-blue-500 hover:bg-blue-600 text-white px-6 py-3 rounded-xl transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center justify-center space-x-2"
               >
                 <Sparkles className="w-5 h-5" />
                 <span>Paste Routine</span>
@@ -405,14 +405,14 @@ const Dashboard: React.FC = () => {
         <div className="fixed bottom-6 right-6 flex flex-col space-y-3">
           <button
             onClick={() => setShowManualForm(true)}
-            className="bg-green-500/80 hover:bg-green-600/80 backdrop-blur-sm text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1 border border-green-400/30"
+            className="bg-green-500 hover:bg-green-600 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1"
             title="Add Routine Manually"
           >
             <Edit className="w-6 h-6" />
           </button>
           <button
             onClick={() => setShowInput(true)}
-            className="bg-blue-500/80 hover:bg-blue-600/80 backdrop-blur-sm text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1 border border-blue-400/30"
+            className="bg-blue-500 hover:bg-blue-600 text-white p-4 rounded-full shadow-lg hover:shadow-xl transition-all duration-200 transform hover:-translate-y-1"
             title="Paste Routine"
           >
             <Sparkles className="w-6 h-6" />
