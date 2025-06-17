@@ -38,18 +38,28 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     // Check initial permission status
     if ('Notification' in window) {
       setPermission(Notification.permission);
+    } else {
+      console.warn('This browser does not support notifications');
     }
 
     // Load settings from localStorage
     const savedSettings = localStorage.getItem('notificationSettings');
     if (savedSettings) {
-      setSettings(JSON.parse(savedSettings));
+      try {
+        setSettings(JSON.parse(savedSettings));
+      } catch (error) {
+        console.error('Error loading notification settings:', error);
+      }
     }
   }, []);
 
   useEffect(() => {
     // Save settings to localStorage whenever they change
-    localStorage.setItem('notificationSettings', JSON.stringify(settings));
+    try {
+      localStorage.setItem('notificationSettings', JSON.stringify(settings));
+    } catch (error) {
+      console.error('Error saving notification settings:', error);
+    }
   }, [settings]);
 
   const requestPermission = async () => {
@@ -61,6 +71,11 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     try {
       const result = await Notification.requestPermission();
       setPermission(result);
+      
+      if (result === 'granted') {
+        // Test notification
+        showNotification('🎉 Notifications Enabled!', 'You\'ll now receive task reminders', 'test');
+      }
     } catch (error) {
       console.error('Error requesting notification permission:', error);
     }
@@ -76,20 +91,20 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
   };
 
   const scheduleTaskNotifications = (tasks: any[]) => {
-    if (!settings.enabled || permission !== 'granted' || !user) {
+    // Clear existing notifications first
+    clearAllNotifications();
+
+    if (!settings.enabled || permission !== 'granted' || !('Notification' in window)) {
       return;
     }
-
-    // Clear existing notifications
-    clearAllNotifications();
 
     const now = new Date();
     const today = now.toISOString().split('T')[0];
     const newTimeouts: NodeJS.Timeout[] = [];
 
     tasks.forEach(task => {
-      // Only schedule for today's tasks
-      if (task.date !== today) return;
+      // Only schedule for today's tasks that aren't completed
+      if (task.date !== today || task.completed) return;
 
       const [hours, minutes] = task.time.split(':').map(Number);
       const taskDate = new Date();
@@ -104,7 +119,7 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
         const reminderTimeout = setTimeout(() => {
           showNotification(
             '⏰ Upcoming Task',
-            `${task.content} at ${formatTime(task.time)}`,
+            `${task.content} starts at ${formatTime(task.time)}`,
             'reminder'
           );
         }, reminderTime.getTime() - now.getTime());
@@ -123,30 +138,46 @@ export const NotificationProvider: React.FC<{ children: React.ReactNode }> = ({ 
     });
 
     setScheduledTimeouts(newTimeouts);
+    
+    if (newTimeouts.length > 0) {
+      console.log(`Scheduled ${newTimeouts.length} notifications for today's tasks`);
+    }
   };
 
-  const showNotification = (title: string, body: string, type: 'reminder' | 'start') => {
-    if (permission !== 'granted') return;
+  const showNotification = (title: string, body: string, type: 'reminder' | 'start' | 'test') => {
+    if (permission !== 'granted' || !('Notification' in window)) return;
 
-    const notification = new Notification(title, {
-      body,
-      icon: '/vite.svg',
-      badge: '/vite.svg',
-      tag: `task-${type}-${Date.now()}`,
-      requireInteraction: false,
-      silent: false
-    });
+    try {
+      const notification = new Notification(title, {
+        body,
+        icon: '/vite.svg',
+        badge: '/vite.svg',
+        tag: `task-${type}-${Date.now()}`,
+        requireInteraction: type === 'start', // Keep start notifications visible longer
+        silent: false,
+        vibrate: type === 'start' ? [200, 100, 200] : [100] // Stronger vibration for start notifications
+      });
 
-    // Auto-close notification after 5 seconds
-    setTimeout(() => {
-      notification.close();
-    }, 5000);
+      // Auto-close notification after specified time
+      const autoCloseTime = type === 'start' ? 10000 : 5000; // 10s for start, 5s for others
+      setTimeout(() => {
+        notification.close();
+      }, autoCloseTime);
 
-    // Handle notification click
-    notification.onclick = () => {
-      window.focus();
-      notification.close();
-    };
+      // Handle notification click
+      notification.onclick = () => {
+        window.focus();
+        notification.close();
+      };
+
+      // Handle notification error
+      notification.onerror = (error) => {
+        console.error('Notification error:', error);
+      };
+
+    } catch (error) {
+      console.error('Error showing notification:', error);
+    }
   };
 
   const formatTime = (time: string) => {

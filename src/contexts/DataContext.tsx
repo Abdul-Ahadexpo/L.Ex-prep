@@ -42,10 +42,11 @@ export const useData = () => {
 export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children }) => {
   const { user } = useAuth();
   const [tasks, setTasks] = useState<Task[]>([]);
-  const [loading, setLoading] = useState(false); // Start with false for instant guest mode
+  const [loading, setLoading] = useState(false);
   const [hasLocalData, setHasLocalData] = useState(false);
-  const [guestMode, setGuestModeState] = useState(true); // Default to guest mode
+  const [guestMode, setGuestModeState] = useState(true);
 
+  // Determine if we're in guest mode
   const isGuestMode = !user || guestMode;
 
   // Check for local data on mount
@@ -62,10 +63,11 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   // Handle auth state changes
   useEffect(() => {
     if (user && !guestMode) {
-      // Load from Firebase for logged-in users
-      loadFromFirebase();
+      // User is logged in and not in guest mode - load from Firebase
+      const unsubscribe = loadFromFirebase();
+      return unsubscribe;
     } else if (!user) {
-      // Reset to guest mode if user logs out
+      // User logged out - reset to guest mode
       setGuestModeState(true);
       loadFromLocalStorage();
     }
@@ -96,6 +98,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         ...doc.data()
       })) as Task[];
       setTasks(tasksData);
+      setLoading(false);
+    }, (error) => {
+      console.error('Error loading from Firebase:', error);
       setLoading(false);
     });
 
@@ -140,10 +145,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const addTask = async (taskData: Omit<Task, 'id'>) => {
     if (user && !guestMode) {
       // Add to Firebase
-      await addDoc(collection(db, 'tasks'), {
-        ...taskData,
-        userId: user.uid
-      });
+      try {
+        await addDoc(collection(db, 'tasks'), {
+          ...taskData,
+          userId: user.uid
+        });
+      } catch (error) {
+        console.error('Error adding task to Firebase:', error);
+        throw error;
+      }
     } else {
       // Add to localStorage
       const newTask: Task = {
@@ -159,7 +169,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const updateTask = async (taskId: string, updates: Partial<Task>) => {
     if (user && !guestMode) {
       // Update in Firebase
-      await updateDoc(doc(db, 'tasks', taskId), updates);
+      try {
+        await updateDoc(doc(db, 'tasks', taskId), updates);
+      } catch (error) {
+        console.error('Error updating task in Firebase:', error);
+        throw error;
+      }
     } else {
       // Update in localStorage
       const updatedTasks = tasks.map(task =>
@@ -173,7 +188,6 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const deleteTask = async (taskId: string) => {
     if (user && !guestMode) {
       // Delete from Firebase
-      // Note: You'll need to implement deleteDoc from Firestore
       console.log('Delete from Firebase not implemented yet');
     } else {
       // Delete from localStorage
@@ -239,7 +253,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const syncLocalToCloud = async () => {
-    if (!user) return;
+    if (!user) {
+      throw new Error('User must be logged in to sync data');
+    }
 
     try {
       const localTasks = localStorage.getItem('lexprep_tasks');

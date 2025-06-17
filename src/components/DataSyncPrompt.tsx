@@ -1,5 +1,5 @@
 import React, { useState } from 'react';
-import { Cloud, HardDrive, X, Upload, Download } from 'lucide-react';
+import { Cloud, HardDrive, X, Upload } from 'lucide-react';
 import { useData } from '../contexts/DataContext';
 
 interface DataSyncPromptProps {
@@ -63,7 +63,7 @@ const DataSyncPrompt: React.FC<DataSyncPromptProps> = ({ onClose }) => {
           </div>
 
           <p className="text-gray-600 dark:text-gray-300 text-sm">
-            Would you like to sync your previous local data to your account? This will upload all your saved routines to the cloud.
+            Would you like to sync your previous local data to your account? This will upload all your saved routines to the cloud and switch to cloud storage.
           </p>
 
           {error && (

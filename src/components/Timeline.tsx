@@ -21,12 +21,12 @@ const Timeline: React.FC<TimelineProps> = ({ tasks, onToggleTask }) => {
 
   const getTagColor = (tag: string) => {
     switch (tag) {
-      case 'School': return 'bg-blue-100 text-blue-700 dark:bg-blue-900/30 dark:text-blue-300';
-      case 'Study': return 'bg-purple-100 text-purple-700 dark:bg-purple-900/30 dark:text-purple-300';
-      case 'Chat': return 'bg-green-100 text-green-700 dark:bg-green-900/30 dark:text-green-300';
-      case 'Break': return 'bg-orange-100 text-orange-700 dark:bg-orange-900/30 dark:text-orange-300';
-      case 'Coaching': return 'bg-red-100 text-red-700 dark:bg-red-900/30 dark:text-red-300';
-      default: return 'bg-gray-100 text-gray-700 dark:bg-gray-700 dark:text-gray-300';
+      case 'School': return 'bg-blue-500/20 text-blue-300 border-blue-400/30';
+      case 'Study': return 'bg-purple-500/20 text-purple-300 border-purple-400/30';
+      case 'Chat': return 'bg-green-500/20 text-green-300 border-green-400/30';
+      case 'Break': return 'bg-orange-500/20 text-orange-300 border-orange-400/30';
+      case 'Coaching': return 'bg-red-500/20 text-red-300 border-red-400/30';
+      default: return 'bg-gray-500/20 text-gray-300 border-gray-400/30';
     }
   };
 
@@ -57,17 +57,17 @@ const Timeline: React.FC<TimelineProps> = ({ tasks, onToggleTask }) => {
   };
 
   return (
-    <div className="bg-white dark:bg-gray-800 rounded-2xl shadow-lg overflow-hidden">
-      <div className="p-6 border-b border-gray-200 dark:border-gray-700">
-        <h2 className="text-xl font-semibold text-gray-900 dark:text-white flex items-center space-x-2">
-          <Clock className="w-5 h-5 text-blue-500" />
+    <div className="bg-white/10 backdrop-blur-xl rounded-2xl shadow-2xl overflow-hidden border border-white/20">
+      <div className="p-6 border-b border-white/20">
+        <h2 className="text-xl font-semibold text-white flex items-center space-x-2">
+          <Clock className="w-5 h-5 text-blue-400" />
           <span>Today's Timeline</span>
         </h2>
       </div>
 
       <div className="relative">
         {/* Timeline line */}
-        <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gray-200 dark:bg-gray-700"></div>
+        <div className="absolute left-8 top-0 bottom-0 w-0.5 bg-gradient-to-b from-blue-400/50 via-purple-400/50 to-blue-400/50"></div>
 
         <div className="space-y-0">
           {tasks.map((task, index) => {
@@ -78,16 +78,16 @@ const Timeline: React.FC<TimelineProps> = ({ tasks, onToggleTask }) => {
               <div
                 key={task.id}
                 className={`relative flex items-start space-x-4 p-6 transition-all duration-200 ${
-                  isCurrent ? 'bg-blue-50 dark:bg-blue-900/20' : ''
-                } ${index !== tasks.length - 1 ? 'border-b border-gray-100 dark:border-gray-700' : ''}`}
+                  isCurrent ? 'bg-blue-500/10 backdrop-blur-sm' : ''
+                } ${index !== tasks.length - 1 ? 'border-b border-white/10' : ''}`}
               >
                 {/* Timeline dot */}
-                <div className={`relative z-10 flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-200 ${
+                <div className={`relative z-10 flex items-center justify-center w-10 h-10 rounded-full border-2 transition-all duration-200 shadow-lg ${
                   isCurrent 
-                    ? 'bg-blue-500 border-blue-500 scale-110' 
+                    ? 'bg-blue-500 border-blue-400 scale-110 shadow-blue-500/50' 
                     : isCompleted 
-                      ? 'bg-green-500 border-green-500' 
-                      : 'bg-white dark:bg-gray-800 border-gray-300 dark:border-gray-600'
+                      ? 'bg-green-500 border-green-400 shadow-green-500/50' 
+                      : 'bg-white/10 backdrop-blur-sm border-white/30'
                 }`}>
                   {isCompleted ? (
                     <Check className="w-5 h-5 text-white" />
@@ -95,7 +95,7 @@ const Timeline: React.FC<TimelineProps> = ({ tasks, onToggleTask }) => {
                     <Clock className="w-5 h-5 text-white animate-pulse" />
                   ) : (
                     <div className={`w-2 h-2 rounded-full ${
-                      isCurrent ? 'bg-white' : 'bg-gray-400 dark:bg-gray-500'
+                      isCurrent ? 'bg-white' : 'bg-gray-400'
                     }`}></div>
                   )}
                 </div>
@@ -105,12 +105,12 @@ const Timeline: React.FC<TimelineProps> = ({ tasks, onToggleTask }) => {
                   <div className="flex items-start justify-between mb-2">
                     <div className="flex items-center space-x-3">
                       <span className={`text-sm font-medium transition-colors ${
-                        isCurrent ? 'text-blue-600 dark:text-blue-400' : 'text-gray-900 dark:text-white'
+                        isCurrent ? 'text-blue-300' : 'text-white'
                       }`}>
                         {formatTime(task.time)}
                         {task.endTime && ` - ${formatTime(task.endTime)}`}
                       </span>
-                      <span className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium ${getTagColor(task.tag)}`}>
+                      <span className={`inline-flex items-center space-x-1 px-2 py-1 rounded-full text-xs font-medium backdrop-blur-sm border ${getTagColor(task.tag)}`}>
                         {getTagIcon(task.tag)}
                         <span>{task.tag}</span>
                       </span>
@@ -120,8 +120,8 @@ const Timeline: React.FC<TimelineProps> = ({ tasks, onToggleTask }) => {
                       onClick={() => onToggleTask(task.id, task.completed)}
                       className={`flex items-center justify-center w-6 h-6 rounded-full border-2 transition-all duration-200 hover:scale-110 ${
                         isCompleted
-                          ? 'bg-green-500 border-green-500'
-                          : 'border-gray-300 dark:border-gray-600 hover:border-green-500'
+                          ? 'bg-green-500 border-green-400 shadow-green-500/50'
+                          : 'border-white/30 hover:border-green-400 backdrop-blur-sm'
                       }`}
                     >
                       {isCompleted && <Check className="w-3 h-3 text-white" />}
@@ -130,17 +130,17 @@ const Timeline: React.FC<TimelineProps> = ({ tasks, onToggleTask }) => {
                   
                   <p className={`text-sm leading-relaxed transition-colors ${
                     isCompleted 
-                      ? 'text-gray-500 dark:text-gray-400 line-through' 
+                      ? 'text-gray-400 line-through' 
                       : isCurrent 
-                        ? 'text-blue-700 dark:text-blue-300 font-medium'
-                        : 'text-gray-700 dark:text-gray-300'
+                        ? 'text-blue-200 font-medium'
+                        : 'text-gray-200'
                   }`}>
                     {task.content}
                   </p>
                   
                   {isCurrent && (
-                    <div className="mt-2 inline-flex items-center space-x-1 text-xs text-blue-600 dark:text-blue-400 font-medium">
-                      <div className="w-2 h-2 bg-blue-500 rounded-full animate-pulse"></div>
+                    <div className="mt-2 inline-flex items-center space-x-1 text-xs text-blue-300 font-medium">
+                      <div className="w-2 h-2 bg-blue-400 rounded-full animate-pulse"></div>
                       <span>Currently active</span>
                     </div>
                   )}
