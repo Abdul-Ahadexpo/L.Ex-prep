@@ -16,8 +16,10 @@ const DataManager: React.FC<DataManagerProps> = ({ onClose }) => {
     try {
       exportData();
       setMessage({ type: 'success', text: 'Data exported successfully!' });
+      setTimeout(() => setMessage(null), 3000);
     } catch (error) {
       setMessage({ type: 'error', text: 'Failed to export data' });
+      setTimeout(() => setMessage(null), 3000);
     }
   };
 
@@ -34,16 +36,25 @@ const DataManager: React.FC<DataManagerProps> = ({ onClose }) => {
 
     try {
       const text = await file.text();
-      const data = JSON.parse(text);
+      console.log('File content:', text);
       
-      if (!data.tasks || !Array.isArray(data.tasks)) {
-        throw new Error('Invalid file format');
+      let data;
+      try {
+        data = JSON.parse(text);
+      } catch (parseError) {
+        throw new Error('Invalid JSON file format');
       }
-
+      
+      console.log('Parsed data:', data);
+      
       await importData(data);
-      setMessage({ type: 'success', text: `Successfully imported ${data.tasks.length} tasks!` });
-    } catch (error) {
-      setMessage({ type: 'error', text: 'Failed to import data. Please check the file format.' });
+      setMessage({ type: 'success', text: `Successfully imported ${data.tasks?.length || 0} tasks!` });
+      setTimeout(() => setMessage(null), 5000);
+    } catch (error: any) {
+      console.error('Import error:', error);
+      const errorMessage = error.message || 'Failed to import data. Please check the file format.';
+      setMessage({ type: 'error', text: errorMessage });
+      setTimeout(() => setMessage(null), 5000);
     } finally {
       setImporting(false);
       if (fileInputRef.current) {
@@ -56,6 +67,7 @@ const DataManager: React.FC<DataManagerProps> = ({ onClose }) => {
     if (confirm('Are you sure you want to clear all local data? This action cannot be undone.')) {
       clearLocalData();
       setMessage({ type: 'success', text: 'Local data cleared successfully!' });
+      setTimeout(() => setMessage(null), 3000);
     }
   };
 
