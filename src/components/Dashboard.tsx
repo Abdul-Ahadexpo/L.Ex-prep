@@ -2,7 +2,7 @@ import React, { useState, useEffect } from 'react';
 import { useAuth } from '../contexts/AuthContext';
 import { useNotifications } from '../contexts/NotificationContext';
 import { useData } from '../contexts/DataContext';
-import { Plus, Clock, Check, LogOut, User, Bell, Settings, Database, HardDrive, Cloud, Edit, Sparkles, Menu, X } from 'lucide-react';
+import { Plus, Clock, Check, LogOut, User, Bell, Settings, Database, HardDrive, Cloud, Edit, Sparkles, Menu, X, AlertCircle, CheckCircle } from 'lucide-react';
 import RoutineInput from './RoutineInput';
 import ManualRoutineForm from './ManualRoutineForm';
 import Timeline from './Timeline';
@@ -12,9 +12,9 @@ import DataSyncPrompt from './DataSyncPrompt';
 import DataManager from './DataManager';
 
 const Dashboard: React.FC = () => {
-  const { user, logout, signInWithGoogle } = useAuth();
+  const { user, logout, signInWithGoogle, error: authError, clearError: clearAuthError } = useAuth();
   const { permission, scheduleTaskNotifications } = useNotifications();
-  const { tasks, loading, isGuestMode, hasLocalData, updateTask } = useData();
+  const { tasks, loading, isGuestMode, hasLocalData, updateTask, error: dataError, clearError: clearDataError } = useData();
   const [showInput, setShowInput] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
   const [showNotificationPrompt, setShowNotificationPrompt] = useState(false);
@@ -22,6 +22,28 @@ const Dashboard: React.FC = () => {
   const [showDataSyncPrompt, setShowDataSyncPrompt] = useState(false);
   const [showDataManager, setShowDataManager] = useState(false);
   const [showMobileMenu, setShowMobileMenu] = useState(false);
+  const [showToast, setShowToast] = useState<{ type: 'success' | 'error'; message: string } | null>(null);
+
+  // Show toast messages for errors
+  useEffect(() => {
+    if (authError) {
+      setShowToast({ type: 'error', message: authError });
+      setTimeout(() => {
+        clearAuthError();
+        setShowToast(null);
+      }, 5000);
+    }
+  }, [authError, clearAuthError]);
+
+  useEffect(() => {
+    if (dataError) {
+      setShowToast({ type: 'error', message: dataError });
+      setTimeout(() => {
+        clearDataError();
+        setShowToast(null);
+      }, 5000);
+    }
+  }, [dataError, clearDataError]);
 
   // Schedule notifications when tasks change
   useEffect(() => {
@@ -92,6 +114,16 @@ const Dashboard: React.FC = () => {
     setShowMobileMenu(false);
   };
 
+  const handleSignIn = async () => {
+    try {
+      await signInWithGoogle();
+      setShowToast({ type: 'success', message: 'Successfully signed in!' });
+      setTimeout(() => setShowToast(null), 3000);
+    } catch (error) {
+      // Error is handled by the auth context
+    }
+  };
+
   const currentTask = getCurrentTask();
   const completedTasks = tasks.filter(task => task.completed).length;
   const totalTasks = tasks.length;
@@ -106,6 +138,30 @@ const Dashboard: React.FC = () => {
 
   return (
     <div className="min-h-screen bg-gray-50 dark:bg-gray-900">
+      {/* Toast Messages */}
+      {showToast && (
+        <div className="fixed top-4 right-4 z-50 animate-slide-up">
+          <div className={`flex items-center space-x-2 px-4 py-3 rounded-lg shadow-lg ${
+            showToast.type === 'success' 
+              ? 'bg-green-500 text-white' 
+              : 'bg-red-500 text-white'
+          }`}>
+            {showToast.type === 'success' ? (
+              <CheckCircle className="w-5 h-5" />
+            ) : (
+              <AlertCircle className="w-5 h-5" />
+            )}
+            <span className="text-sm font-medium">{showToast.message}</span>
+            <button
+              onClick={() => setShowToast(null)}
+              className="ml-2 text-white hover:text-gray-200"
+            >
+              <X className="w-4 h-4" />
+            </button>
+          </div>
+        </div>
+      )}
+
       {/* Header */}
       <header className="bg-white dark:bg-gray-800 shadow-sm border-b border-gray-200 dark:border-gray-700">
         <div className="max-w-4xl mx-auto px-4 py-4">
@@ -152,7 +208,7 @@ const Dashboard: React.FC = () => {
               {isGuestMode ? (
                 <div className="flex flex-col items-end">
                   <button
-                    onClick={signInWithGoogle}
+                    onClick={handleSignIn}
                     className="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-lg transition-all duration-200 shadow-lg hover:shadow-xl transform hover:-translate-y-0.5 flex items-center space-x-2 text-sm font-medium"
                   >
                     <span>🔒</span>
@@ -241,7 +297,7 @@ const Dashboard: React.FC = () => {
                     {/* Login/Profile Section */}
                     {isGuestMode ? (
                       <button
-                        onClick={() => handleMobileMenuAction(signInWithGoogle)}
+                        onClick={() => handleMobileMenuAction(handleSignIn)}
                         className="w-full bg-blue-500 hover:bg-blue-600 text-white px-4 py-3 rounded-lg transition-all duration-200 flex items-center justify-center space-x-2 text-sm font-medium"
                       >
                         <span>🔒</span>
