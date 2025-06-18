@@ -19,6 +19,7 @@ interface DataContextType {
   loading: boolean;
   isGuestMode: boolean;
   hasLocalData: boolean;
+  error: string | null;
   addTask: (task: Omit<Task, 'id'>) => Promise<void>;
   updateTask: (taskId: string, updates: Partial<Task>) => Promise<void>;
   deleteTask: (taskId: string) => Promise<void>;
@@ -27,6 +28,7 @@ interface DataContextType {
   syncLocalToCloud: () => Promise<void>;
   clearLocalData: () => void;
   setGuestMode: (isGuest: boolean) => void;
+  clearError: () => void;
 }
 
 const DataContext = createContext<DataContextType | undefined>(undefined);
@@ -45,8 +47,9 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   const [loading, setLoading] = useState(false);
   const [hasLocalData, setHasLocalData] = useState(false);
   const [guestMode, setGuestModeState] = useState(true);
+  const [error, setError] = useState<string | null>(null);
 
-  // Determine if we're in guest mode
+  // Determine if we're in guest mode - FIXED LOGIC
   const isGuestMode = !user || guestMode;
 
   // Check for local data on mount
@@ -57,33 +60,53 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
 
   // Initialize with guest mode immediately
   useEffect(() => {
-    loadFromLocalStorage();
+    if (!user) {
+      loadFromLocalStorage();
+    }
   }, []);
 
-  // Handle auth state changes
+  // Handle auth state changes - FIXED
   useEffect(() => {
     if (user && !guestMode) {
+      console.log('User logged in, switching to Firebase mode');
       // User is logged in and not in guest mode - load from Firebase
       const unsubscribe = loadFromFirebase();
       return unsubscribe;
     } else if (!user) {
+      console.log('User logged out, switching to guest mode');
       // User logged out - reset to guest mode
       setGuestModeState(true);
       loadFromLocalStorage();
+    } else if (user && guestMode) {
+      console.log('User logged in but still in guest mode');
+      // User is logged in but we're still in guest mode
+      // This happens right after login - we should switch to cloud mode
+      setGuestModeState(false);
     }
   }, [user, guestMode]);
 
   const setGuestMode = (isGuest: boolean) => {
+    console.log('Setting guest mode:', isGuest);
     setGuestModeState(isGuest);
     if (isGuest) {
       loadFromLocalStorage();
     }
   };
 
-  const loadFromFirebase = () => {
-    if (!user || guestMode) return;
+  const clearError = () => {
+    setError(null);
+  };
 
+  const loadFromFirebase = () => {
+    if (!user) {
+      console.log('No user, cannot load from Firebase');
+      return;
+    }
+
+    console.log('Loading data from Firebase for user:', user.email);
     setLoading(true);
+    setError(null);
+    
     const today = new Date().toISOString().split('T')[0];
     const q = query(
       collection(db, 'tasks'),
@@ -97,10 +120,12 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
         id: doc.id,
         ...doc.data()
       })) as Task[];
+      console.log('Loaded tasks from Firebase:', tasksData.length);
       setTasks(tasksData);
       setLoading(false);
     }, (error) => {
       console.error('Error loading from Firebase:', error);
+      setError('Failed to load data from cloud');
       setLoading(false);
     });
 
@@ -108,18 +133,21 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const loadFromLocalStorage = () => {
+    console.log('Loading data from localStorage');
     try {
       const today = new Date().toISOString().split('T')[0];
       const localTasks = localStorage.getItem('lexprep_tasks');
       if (localTasks) {
         const allTasks = JSON.parse(localTasks) as Task[];
         const todayTasks = allTasks.filter(task => task.date === today);
+        console.log('Loaded tasks from localStorage:', todayTasks.length);
         setTasks(todayTasks.sort((a, b) => a.time.localeCompare(b.time)));
       } else {
         setTasks([]);
       }
     } catch (error) {
       console.error('Error loading from localStorage:', error);
+      setError('Failed to load local data');
       setTasks([]);
     }
     setLoading(false);
@@ -137,25 +165,32 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       
       localStorage.setItem('lexprep_tasks', JSON.stringify(allTasks));
       setHasLocalData(allTasks.length > 0);
+      console.log('Saved to localStorage:', allTasks.length, 'total tasks');
     } catch (error) {
       console.error('Error saving to localStorage:', error);
+      setError('Failed to save data locally');
     }
   };
 
   const addTask = async (taskData: Omit<Task, 'id'>) => {
+    setError(null);
+    
     if (user && !guestMode) {
       // Add to Firebase
       try {
+        console.log('Adding task to Firebase');
         await addDoc(collection(db, 'tasks'), {
           ...taskData,
           userId: user.uid
         });
       } catch (error) {
         console.error('Error adding task to Firebase:', error);
+        setError('Failed to save task to cloud');
         throw error;
       }
     } else {
       // Add to localStorage
+      console.log('Adding task to localStorage');
       const newTask: Task = {
         ...taskData,
         id: Date.now().toString()
@@ -167,12 +202,15 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const updateTask = async (taskId: string, updates: Partial<Task>) => {
+    setError(null);
+    
     if (user && !guestMode) {
       // Update in Firebase
       try {
         await updateDoc(doc(db, 'tasks', taskId), updates);
       } catch (error) {
         console.error('Error updating task in Firebase:', error);
+        setError('Failed to update task in cloud');
         throw error;
       }
     } else {
@@ -186,6 +224,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
   };
 
   const deleteTask = async (taskId: string) => {
+    setError(null);
+    
     if (user && !guestMode) {
       // Delete from Firebase
       console.log('Delete from Firebase not implemented yet');
@@ -219,36 +259,96 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       URL.revokeObjectURL(url);
     } catch (error) {
       console.error('Error exporting data:', error);
+      setError('Failed to export data');
       throw new Error('Failed to export data');
     }
   };
 
   const importData = async (data: any) => {
+    setError(null);
+    console.log('Importing data:', data);
+    
     try {
-      if (!data.tasks || !Array.isArray(data.tasks)) {
-        throw new Error('Invalid data format');
+      // Validate data structure
+      if (!data || typeof data !== 'object') {
+        throw new Error('Invalid file format - not a valid JSON object');
       }
+      
+      if (!data.tasks || !Array.isArray(data.tasks)) {
+        throw new Error('Invalid file format - missing or invalid tasks array');
+      }
+
+      if (data.tasks.length === 0) {
+        throw new Error('No tasks found in the file');
+      }
+
+      // Validate each task has required fields
+      for (const task of data.tasks) {
+        if (!task.time || !task.content || !task.tag || typeof task.completed !== 'boolean') {
+          throw new Error('Invalid task format - missing required fields (time, content, tag, completed)');
+        }
+      }
+
+      console.log(`Importing ${data.tasks.length} tasks`);
 
       if (user && !guestMode) {
         // Import to Firebase
+        console.log('Importing to Firebase');
         const batch = writeBatch(db);
-        data.tasks.forEach((task: any) => {
+        let batchCount = 0;
+        
+        for (const task of data.tasks) {
           const taskRef = doc(collection(db, 'tasks'));
           batch.set(taskRef, {
             ...task,
             userId: user.uid,
             id: undefined // Let Firestore generate the ID
           });
-        });
-        await batch.commit();
+          batchCount++;
+          
+          // Firestore batch limit is 500 operations
+          if (batchCount >= 500) {
+            await batch.commit();
+            batchCount = 0;
+          }
+        }
+        
+        if (batchCount > 0) {
+          await batch.commit();
+        }
+        
+        console.log('Successfully imported to Firebase');
       } else {
         // Import to localStorage
-        localStorage.setItem('lexprep_tasks', JSON.stringify(data.tasks));
+        console.log('Importing to localStorage');
+        
+        // Get existing tasks
+        const existingTasks = JSON.parse(localStorage.getItem('lexprep_tasks') || '[]') as Task[];
+        
+        // Add imported tasks with new IDs
+        const importedTasks = data.tasks.map((task: any, index: number) => ({
+          ...task,
+          id: `imported_${Date.now()}_${index}`
+        }));
+        
+        // Combine and save
+        const allTasks = [...existingTasks, ...importedTasks];
+        localStorage.setItem('lexprep_tasks', JSON.stringify(allTasks));
+        
+        // Reload current view
         loadFromLocalStorage();
+        
+        console.log('Successfully imported to localStorage');
       }
+      
+      // Show success message
+      setError(null);
+      
     } catch (error) {
       console.error('Error importing data:', error);
-      throw new Error('Failed to import data');
+      const errorMessage = error instanceof Error ? error.message : 'Failed to import data';
+      setError(errorMessage);
+      throw new Error(errorMessage);
     }
   };
 
@@ -257,30 +357,51 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
       throw new Error('User must be logged in to sync data');
     }
 
+    setError(null);
+    console.log('Syncing local data to cloud');
+
     try {
       const localTasks = localStorage.getItem('lexprep_tasks');
-      if (!localTasks) return;
+      if (!localTasks) {
+        console.log('No local data to sync');
+        return;
+      }
 
       const tasks = JSON.parse(localTasks) as Task[];
+      console.log(`Syncing ${tasks.length} tasks to cloud`);
+      
       const batch = writeBatch(db);
+      let batchCount = 0;
 
-      tasks.forEach(task => {
+      for (const task of tasks) {
         const taskRef = doc(collection(db, 'tasks'));
         batch.set(taskRef, {
           ...task,
           userId: user.uid,
           id: undefined // Let Firestore generate the ID
         });
-      });
-
-      await batch.commit();
+        batchCount++;
+        
+        // Firestore batch limit is 500 operations
+        if (batchCount >= 500) {
+          await batch.commit();
+          batchCount = 0;
+        }
+      }
       
+      if (batchCount > 0) {
+        await batch.commit();
+      }
+
       // Clear local data after successful sync and switch to cloud mode
       localStorage.removeItem('lexprep_tasks');
       setHasLocalData(false);
       setGuestModeState(false); // Switch to cloud mode
+      
+      console.log('Successfully synced to cloud');
     } catch (error) {
       console.error('Error syncing to cloud:', error);
+      setError('Failed to sync data to cloud');
       throw new Error('Failed to sync data to cloud');
     }
   };
@@ -298,6 +419,7 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     loading,
     isGuestMode,
     hasLocalData,
+    error,
     addTask,
     updateTask,
     deleteTask,
@@ -305,7 +427,8 @@ export const DataProvider: React.FC<{ children: React.ReactNode }> = ({ children
     importData,
     syncLocalToCloud,
     clearLocalData,
-    setGuestMode
+    setGuestMode,
+    clearError
   };
 
   return <DataContext.Provider value={value}>{children}</DataContext.Provider>;
